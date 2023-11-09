@@ -120,6 +120,8 @@ void render_frame(struct swaylock_surface *surface) {
 			text = "Cleared";
 		} else if (state->auth_state == AUTH_STATE_VALIDATING) {
 			text = "Verifying";
+		} else if (state->auth_state == AUTH_STATE_FINGERPRINT) {
+			text = state->fingerprint_msg;
 		} else if (state->auth_state == AUTH_STATE_INVALID) {
 			text = "Wrong";
 		} else {

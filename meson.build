@@ -35,6 +35,7 @@ wayland_scanner = dependency('wayland-scanner', version: '>=1.15.0', native: tru
 xkbcommon = dependency('xkbcommon')
 cairo = dependency('cairo')
 gdk_pixbuf = dependency('gdk-pixbuf-2.0', required: get_option('gdk-pixbuf'))
+dbus = dependency('dbus-1', required: get_option('fingerprint'))
 libpam = cc.find_library('pam', required: get_option('pam'))
 crypt = cc.find_library('crypt', required: not libpam.found())
 math = cc.find_library('m')
@@ -81,8 +82,7 @@ conf_data = configuration_data()
 conf_data.set_quoted('SYSCONFDIR', get_option('prefix') / get_option('sysconfdir'))
 conf_data.set_quoted('SWAYLOCK_VERSION', version)
 conf_data.set10('HAVE_GDK_PIXBUF', gdk_pixbuf.found())
-
-subdir('include')
+conf_data.set10('HAVE_FINGERPRINT', dbus.found())
 
 dependencies = [
 	cairo,
@@ -92,6 +92,12 @@ dependencies = [
 	xkbcommon,
 	wayland_client,
 ]
+
+subdir('include')
+if dbus.found()
+	subdir('fingerprint')
+	dependencies += [fingerprint]
+endif
 
 sources = [
 	'background-image.c',

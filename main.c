@@ -26,6 +26,9 @@
 #include "seat.h"
 #include "swaylock.h"
 #include "ext-session-lock-v1-client-protocol.h"
+#if HAVE_FINGERPRINT
+#include "fingerprint/fingerprint.h"
+#endif
 
 static uint32_t parse_color(const char *color) {
 	if (color[0] == '#') {
@@ -533,6 +536,9 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 		{"disable-caps-lock-text", no_argument, NULL, 'L'},
 		{"indicator-caps-lock", no_argument, NULL, 'l'},
 		{"line-uses-inside", no_argument, NULL, 'n'},
+#if HAVE_FINGERPRINT
+		{"fingerprint", no_argument, NULL, 'p'},
+#endif
 		{"line-uses-ring", no_argument, NULL, 'r'},
 		{"scaling", required_argument, NULL, 's'},
 		{"tiling", no_argument, NULL, 't'},
@@ -608,6 +614,10 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 			"Disable the Caps Lock text.\n"
 		"  -l, --indicator-caps-lock        "
 			"Show the current Caps Lock state also on the indicator.\n"
+#if HAVE_FINGERPRINT
+		"  -p, --fingerprint                "
+			"Enable fingerprint scanning. Fprint is required.\n"
+#endif
 		"  -s, --scaling <mode>             "
 			"Image scaling mode: stretch, fill, fit, center, tile, solid_color.\n"
 		"  -t, --tiling                     "
@@ -705,7 +715,7 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 	optind = 1;
 	while (1) {
 		int opt_idx = 0;
-		c = getopt_long(argc, argv, "c:deFfhi:kKLlnrs:tuvC:R:", long_options,
+		c = getopt_long(argc, argv, "c:deFfhi:kKLlnprs:tuvC:R:", long_options,
 				&opt_idx);
 		if (c == -1) {
 			break;
@@ -749,6 +759,13 @@ static int parse_options(int argc, char **argv, struct swaylock_state *state,
 				load_image(optarg, state);
 			}
 			break;
+#if HAVE_FINGERPRINT
+		case 'p':
+			if(state) {
+				state->args.fingerprint = true;
+			}
+			break;
+#endif
 		case 'k':
 			if (state) {
 				state->args.show_keyboard_layout = true;
@@ -1114,6 +1131,19 @@ void log_init(int argc, char **argv) {
 	swaylock_log_init(LOG_ERROR);
 }
 
+#if HAVE_FINGERPRINT
+static void check_fingerprint(void *d) {
+	struct FingerprintState *fingerprint_state = d;
+	if (fingerprint_verify(fingerprint_state)) {
+		do_sigusr(1);
+	} else {
+		(void)write(sigusr_fds[1], NULL, 0);
+	}
+
+	loop_add_timer(state.eventloop, 300, check_fingerprint, fingerprint_state);
+}
+#endif
+
 int main(int argc, char **argv) {
 	log_init(argc, argv);
 	initialize_pw_backend(argc, argv);
@@ -1139,6 +1169,7 @@ int main(int argc, char **argv) {
 		.hide_keyboard_layout = false,
 		.show_failed_attempts = false,
 		.indicator_idle_visible = false,
+		.fingerprint = false,
 		.ready_fd = -1,
 	};
 	wl_list_init(&state.images);
@@ -1280,6 +1311,14 @@ int main(int argc, char **argv) {
 	sa.sa_flags = SA_RESTART;
 	sigaction(SIGUSR1, &sa, NULL);
 
+#if HAVE_FINGERPRINT
+	struct FingerprintState fingerprint_state;
+	if(state.args.fingerprint) {
+		fingerprint_init(&fingerprint_state, &state);
+		loop_add_timer(state.eventloop, 100, check_fingerprint, &fingerprint_state);
+	}
+#endif
+
 	state.run_display = true;
 	while (state.run_display) {
 		errno = 0;
@@ -1292,6 +1331,11 @@ int main(int argc, char **argv) {
 	ext_session_lock_v1_unlock_and_destroy(state.ext_session_lock_v1);
 	wl_display_roundtrip(state.display);
 
+#if HAVE_FINGERPRINT
+	if(state.args.fingerprint) {
+		fingerprint_deinit(&fingerprint_state);
+	}
+#endif
 	free(state.args.font);
 	cairo_destroy(state.test_cairo);
 	cairo_surface_destroy(state.test_surface);

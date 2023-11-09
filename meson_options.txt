@@ -1,4 +1,5 @@
 option('pam', type: 'feature', value: 'auto', description: 'Use PAM instead of shadow')
+option('fingerprint', type: 'feature', value: 'auto', description: 'Add fprintd support')
 option('gdk-pixbuf', type: 'feature', value: 'auto', description: 'Enable support for more image formats')
 option('man-pages', type: 'feature', value: 'auto', description: 'Generate and install man pages')
 option('zsh-completions', type: 'boolean', value: true, description: 'Install zsh shell completions')

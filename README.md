@@ -30,10 +30,13 @@ Install dependencies:
 * cairo
 * gdk-pixbuf2 \*\*
 * pam (optional)
+* fprintd (optional: fingerprint)
+* dbus (optional: fingerprint)
+* glib (optional: fingerprint)
 * [scdoc](https://git.sr.ht/~sircmpwn/scdoc) (optional: man pages) \*
 * git \*
 
-_\* Compile-time dep_  
+_\* Compile-time dep_
 _\*\* Optional: required for background images other than PNG_
 
 Run these commands:
